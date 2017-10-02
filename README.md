@@ -12,7 +12,7 @@ I use Google Earth to build tracks for adventure rides I do every year.  When cr
 
 ## Adding Google Maps
 If you want to enable Google Maps you'll need to add loadmap.js to the root of your project.
-```html
+```js
 var head = document.getElementsByTagName('head')[0];
 var script = document.createElement('script');
 script.src = 'https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY';
