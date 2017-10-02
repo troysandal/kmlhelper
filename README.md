@@ -9,3 +9,13 @@ I use Google Earth to build tracks for adventure rides I do every year.  When cr
 * **show On Map** - Display KML in Google Maps.
 * **split At Distance** - I use this to split a single, long track, every N miles where N, placed in 2nd KML field, is the distance I can safely go on my motorcycle without running out of fuel.
 * **splitAtPoint** - Splits a LineString nearest a given point.  Place split points as lat,long into 2nd KML fiel, e.g. -121.293921, 35.2030
+
+## Adding Google Maps
+If you want to enable Google Maps you'll need to add loadmap.js to the root of your project.
+```html
+var head = document.getElementsByTagName('head')[0];
+var script = document.createElement('script');
+script.src = 'https://maps.googleapis.com/maps/api/js?key=GOOGLE_MAPS_API_KEY';
+script.type = "text/javascript";
+head.appendChild(script);
+```

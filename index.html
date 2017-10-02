@@ -30,7 +30,7 @@
 			$("#kmlText").val(jqXHR.responseText);
 		});
 
-		$(".tabButton").click(function() {
+		$("#showKML").click(function() {
 			$("#map").toggle("hidden");
 		});
 
@@ -98,7 +98,7 @@
 	<h1>KML Helpers</h1>
 	<div id="">
 		<div class="button-bar">
-			<button id="showKML" class="tabButton">KML/Map</button>
+			<button id="showKML">KML/Map</button>
 		</div>
 
 		<div id="map"></div>
