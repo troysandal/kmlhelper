@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Remove MultiGeometry</title>
+	<meta charset="utf-8">
+	<script src="jquery.min.js"></script>
+	<style>
+	textarea {
+		width: 800px;
+		height: 300px;
+	}
+
+	#map {
+		width: 100%;
+		height: 400px;
+	}
+
+	.hidden {
+		display:none;
+	}
+
+	</style>
+
+	<script src="kml.js"></script>
+	<script src="loadmap.js"></script>
+
+	<script type="text/javascript">
+	$(window).ready(function() {
+		$.get('sample.kml', function(newXML, code, jqXHR) {
+			$("#kmlText").val(jqXHR.responseText);
+		});
+
+		$(".tabButton").click(function() {
+			$("#map").toggle("hidden");
+		});
+
+		$(".helper").click(function() {
+			var helper = Helpers[this.id];
+			if (helper) {
+				var xml = $("#kmlText").val();
+
+				console.log("Running %s", this.id);
+				var newXML = helper(xml);
+
+				if (newXML) {
+					$("#kmlText").val(newXML);
+				}
+			}
+			else {
+				alert("Helper not found dummy!")
+				console.error("Helper %s not found.", this.id);
+			}
+		});
+
+		$(".helper2").click(function() {
+			var helper = Helpers[this.id];
+			if (helper) {
+				try {
+					console.log("Running %s", this.id);
+					var context = new Context();
+					helper(context);
+				}
+				catch (e) {
+					if (e instanceof XMLDocument) {
+						var oSerializer = new XMLSerializer();
+						xml = oSerializer.serializeToString(e);
+						alert(xml);
+					}
+					else {
+						throw e
+					}
+				}
+			}
+			else {
+				alert("Helper not found dummy!")
+				console.error("Helper %s not found.", this.id);
+			}
+		});
+	});
+
+	var map;
+
+	function initMap() {
+		var mapOptions = {
+			zoom: 8,
+			center: new google.maps.LatLng(-34.397, 150.644),
+			mapTypeId: google.maps.MapTypeId.ROADMAP
+		};
+
+		map = new google.maps.Map($("#map")[0], mapOptions);
+		Helpers.map = map;
+		$('#showOnMap').trigger('click');
+	}
+	</script>
+</head>
+
+<body>
+	<h1>KML Helpers</h1>
+	<div id="">
+		<div class="button-bar">
+			<button id="showKML" class="tabButton">KML/Map</button>
+		</div>
+
+		<div id="map"></div>
+
+		<div id="kml-text" class="tab-body">
+			<div class="button-bar">
+				<button id="removeMultiGeometry" class="helper2">Remove Multi-Geometry</button>
+				<button id="makeMultiGeometry" class="helper2">Make Multi-Geometry</button>
+				<button id="addDistance2Name" class="helper">Append Distance 2 Names</button>
+				<button id="reversePath" class="helper">Reverse Path</button>
+				<button id="gx2LineString" class="helper">GX Coords to KML Line String</button>
+				<button id="getInfo (TBD)" class="helper">Get Info</button>
+				<button id="split" class="helper2">Split</button>
+				<button id="splitAtPoint" class="helper2">Split At Point</button>
+				<button id="splitAtDistance" class="helper2">Split Every N Miles</button>
+				<button id="combineStrings" class="helper2">Combine LineStrings</button>
+				<button id="showOnMap" class="helper2">Show On Map</button>
+			</div>
+			<textarea id="kmlText">
+<Document>
+	<name>KmlFile</name>
+	<Placemark>
+		<LineString>
+			<coordinates>
+				-120.957674,39.922331,1506.52 -120.914556,39.934872,1059.51
+			</coordinates>
+		</LineString>
+	</Placemark>
+</Document>
+			</textarea>
+			<h2>2nd KML</h2>
+			<textarea id="kmlText2">100 </textarea>
+		</div>
+	</div>
+
+</body>
+<html>

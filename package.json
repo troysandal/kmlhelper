@@ -1,0 +1,19 @@
+{
+  "name": "kmlhelper",
+  "version": "0.1.0",
+  "description": "Routines for slicing KML Linestrings that Google Earth should provide.",
+  "scripts": {
+    "start": "node node_modules/.bin/http-server -c-1",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "kml",
+    "google",
+    "earth"
+  ],
+  "author": "troy@photagonist.com",
+  "license": "MIT",
+  "devDependencies": {
+    "http-server": "^0.10.0"
+  }
+}
