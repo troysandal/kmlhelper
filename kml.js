@@ -15,25 +15,23 @@ function tassert(condition, test) {
 }
 assert = tassert;
 
-(function() { // Context
-	/**
-	Context for running helpers, handles parsing and saving KMLs.
-	**/
-	function Context() {
+// Context for running helpers, handles parsing and saving KMLs.
+class Context {
+	constructor() {
 		this._kml = null;
 		this._kml2 = null;
 	}
 
-	Context.prototype.getKML = function() {
+	getKML() {
 		this._kml = this._loadXmlDoc("#kmlText");
 		return this._kml;
 	}
-	Context.prototype.getKML2 = function() {
+	getKML2() {
 		this._kml2 = this._loadXmlDoc("#kmlText2");
 		return this._kml2;
 	}
 
-	Context.prototype.getLatLong = function(index) {
+	getLatLong(index) {
 		if (0 === index || !index) {
 			index = "";
 		}
@@ -42,7 +40,7 @@ assert = tassert;
 		return LatLong.parse(text);
 	}
 
-	Context.prototype.getInteger = function(index) {
+	getInteger(index) {
 		if (0 === index || !index) {
 			index = "";
 		}
@@ -52,7 +50,7 @@ assert = tassert;
 	}
 
 
-	Context.prototype._loadXmlDoc = function(selector) {
+	_loadXmlDoc(selector) {
 		var result = null;
 		var xml = $(selector).val();
 		var parser = new DOMParser();
@@ -69,22 +67,24 @@ assert = tassert;
 		return result;
 	}
 
-	Context.prototype.save = function(xmlDoc) {
+	save(xmlDoc) {
 		if (xmlDoc === this._kml || xmlDoc === this._kml2) {
 			this._saveKML(xmlDoc, "#kmlText");
 		}
 	}
 
-	Context.prototype._saveKML = function(xmlDoc, selector) {
-		var oSerializer = new XMLSerializer();
-		xml = oSerializer.serializeToString(xmlDoc);
+	_saveKML(xmlDoc, selector) {
+		const oSerializer = new XMLSerializer();
+		const xml = oSerializer.serializeToString(xmlDoc);
 		$(selector).val(xml);
 	}
-	window.Context = Context;
-}());
+}
+function deg2rad(deg) {
+	return (2 * Math.PI * deg)/360;
+}
 
-(function() { // LatLong
-	var LatLong = function(lat, long, altitude) {
+class LatLong {
+	constructor(lat, long, altitude) {
 		this.lat = lat;
 		this.long = long;
 		this.alt = altitude ? altitude : 0;
@@ -93,7 +93,7 @@ assert = tassert;
 	/**
 	 * <gx:coord>-122.862637 39.121016 403.89</gx:coord>
 	 */
-	LatLong.parseGXCoord = function(data) {
+	static parseGXCoordfunction(data) {
 		var result;
 
 		if (data && typeof data === "string") {
@@ -111,7 +111,7 @@ assert = tassert;
 		return result;
 	}
 
-	LatLong.parse = function(data) {
+	static parse(data) {
 		var result;
 
 		if (data && typeof data === "string") {
@@ -130,15 +130,11 @@ assert = tassert;
 		return result;
 	}
 
-	LatLong.prototype.toString = function() {
+	toString() {
 		return this.long + "," + this.lat + "," + this.alt;
 	};
 
-	function deg2rad(deg) {
-		return (2 * Math.PI * deg)/360;
-	}
-
-	LatLong.prototype.isEqual = function(other) {
+	isEqual(other) {
 		if (other.latLong) {
 			other = other.latLong;
 		}
@@ -146,7 +142,7 @@ assert = tassert;
 	}
 
 	// Kilometers
-	LatLong.prototype.distance = function(other) {
+	distance(other) {
 		var R = EARTH_MEAN_RADIUS; // km
 		var lat1 = deg2rad(this.lat);
 		var lon1 = deg2rad(this.long);
@@ -162,21 +158,19 @@ assert = tassert;
 		var d = R * c;
 		return d;
 	};
+}
 
-	window.LatLong = LatLong;
-}());
-
-(function() { // LineSegment
-	var LineSegment = function(A, B) {
+class LineSegment {
+	constructor(A, B) {
 		this.A = A;
 		this.B = B;
 	}
 
-	LineSegment.prototype.slope = function() {
+	slope() {
 		return (this.A.y - this.B.y) / (this.A.x - this.B.x);
 	};
 
-	LineSegment.prototype.length = function() {
+	length() {
 		return Math.sqrt(Math.pow(this.A.y - this.B.y, 2) + Math.pow(this.A.x - this.B.x, 2));
 	}
 
@@ -184,7 +178,7 @@ assert = tassert;
 	 Find intersection by converting to slope/intercept form and setting equal.
 	 	y = mx + b
 	 **/
-	LineSegment.prototype.intersect = function(other) {
+	intersect(other) {
 		var result = { x: 0/0, y: 0/0 };
 		// b = y - mx
 		var b1 = this.A.y - this.slope() * this.A.x;
@@ -199,7 +193,7 @@ assert = tassert;
 		return result;
 	};
 
-	LineSegment.test = function() {
+	static test() {
 		var ls;
 
 		// Test Dot
@@ -232,26 +226,25 @@ assert = tassert;
 		var E = AB.intersect(CD);
 		tassert(E.x = 5/2);
 		tassert(E.y = 5/2)
+
+		console.log('LineSegment test PASSED')
 	}
+}
 
-	window.LineSegment = LineSegment;
-}());
-
-(function() { // Point
-	var Point = function(x,y) {
+class Point {
+	constructor(x,y) {
 		this.x = x;
 		this.y = y;
 	}
-	window.Point = Point;
-}());
+}
 
-(function() { // LineString
-	var LineString = function(coordinates, margin) {
+class LineString {
+	constructor(coordinates, margin) {
 		this._coordinates = coordinates || [];
 		this._margin = margin || "";
 	}
 
-	LineString.parseCoordinates = function(kmlCoords) {
+	static parseCoordinates(kmlCoords) {
 		var result = null;
 
 		if (kmlCoords && typeof kmlCoords === "string") {
@@ -285,12 +278,12 @@ assert = tassert;
 		return result;
 	}
 
-	LineString.prototype.coordinates = function() { return this._coordinates; }
+	coordinates() { return this._coordinates; }
 
 	/**
 	Splits this string every N miles.
 	*/
-	LineString.prototype.splitAtMileage = function(mileage, inMiles) {
+	splitAtMileage(mileage, inMiles) {
 		var strings = [];
 		var last = this._coordinates[0];
 		var ls = new LineString();
@@ -322,24 +315,24 @@ assert = tassert;
 	/** Concats linestrings - doesn't duplicate the points thus the latlongs
 	 * are shared, could be an issue.
 	 */
-	LineString.prototype.push = function(latLong) {
+	push(latLong) {
 		this._coordinates.push(latLong);
 	};
 
 	/** Concats linestrings - doesn't duplicate the points thus the latlongs
 	 * are shared, could be an issue.
 	 */
-	LineString.prototype.concat = function(other) {
+	concat(other) {
 		this._coordinates = this._coordinates.concat(other._coordinates)
 	};
 
-	LineString.prototype.reverse = function() {
+	reverse() {
 		this._coordinates.reverse();
 	};
 
 	/** Returns string length in kilometers or miles.
 	 */
-	LineString.prototype.distance = function(miles) {
+	distance(miles) {
 		var accum = 0;
 
 		for (var i = 0 ; i < this._coordinates.length - 1 ; i++ ) {
@@ -357,7 +350,7 @@ assert = tassert;
 		return accum;
 	};
 
-	LineString.prototype.intersections = function(other) {
+	intersections(other) {
 		var result = [];
 
 		for (var i = 0 ; i < this._coordinates.length ; i++ ) {
@@ -371,7 +364,7 @@ assert = tassert;
 		return result;
 	};
 
-	LineString.test_nearestPointTo = function() {
+	static test_nearestPointTo() {
 		var ls = new LineString([new LatLong(0,0), new LatLong(1,1), new LatLong(2,2)])
 		var pt = new LatLong(1.1, 0.9);
 		var expect = new LatLong(1,1);
@@ -379,9 +372,10 @@ assert = tassert;
 		if (near.index === -1 || !near.latLong.isEqual(expect)) {
 			console.error("test_nearestPointTo #fail");
 		}
+		console.log('LineString test_nearestPointTo PASSED')
 	}
 
-	LineString.prototype.nearestPointTo = function(point) {
+	nearestPointTo(point) {
 		var min = { index:-1, latLong:null, distance:1/0 };
 
 		$.each(this._coordinates, function(index, coordinate) {
@@ -397,7 +391,7 @@ assert = tassert;
 		return min;
 	};
 
-	LineString.prototype.split = function(where, inclusive) {
+	split(where, inclusive) {
 		var result;
 		var index = where.index || this.indexOf(where);
 		var latLong = where.latLong || where;
@@ -414,15 +408,15 @@ assert = tassert;
 		return result;
 	};
 
-	LineString.prototype.getStartPoint = function() {
+	getStartPoint() {
 		return this._coordinates[0];
 	}
 
-	LineString.prototype.getEndPoint = function() {
+	getEndPoint() {
 		return this._coordinates[this._coordinates.length - 1];
 	}
 
-	LineString.prototype.indexOf = function(latLong) {
+	indexOf(latLong) {
 		var result = -1;
 
 		for (var i = 0 ; i < this._coordinates.length ; i++ ) {
@@ -435,7 +429,7 @@ assert = tassert;
 		return result;
 	}
 
-	LineString.prototype.toXMLString = function() {
+	toXMLString() {
 		var result = this._margin;
 
 		for (var i = 0 ; i < this._coordinates.length ; i++ ) {
@@ -451,16 +445,10 @@ assert = tassert;
 		result += this._margin;
 		return result;
 	};
+}
 
-	window.LineString = LineString;
-}());
-
-(function() { // Helpers
-	var Helpers = function() {
-
-	}
-
-	Helpers.addDistance2Name = function(xml) {
+class Helpers {
+	static addDistance2Name(xml) {
 		/**
 		 * In GEarth I commonly suffix track names with their length so it's easy to
 		 * see how far we'll go in a day.  This method does that for any linestring
@@ -501,12 +489,12 @@ assert = tassert;
 		return result;
 	}
 
-	Helpers.removeMultiGeometry = function(ctx) {
+	static removeMultiGeometry(ctx) {
 		/**
 		 * Many KML files I get have a single line string in a multigeometry section.
 		 * Google Earth doesn't expose the singular linestring in it's interface which
 		 * means I can't extract it in order to get length and altitude from it.
-		 * This helper does just that simple think.
+		 * This helper does just that simple thing.
 		 */
 		var xmlDoc = ctx.getKML();
 		var mgs = $(xmlDoc).find("Placemark MultiGeometry");
@@ -534,14 +522,15 @@ assert = tassert;
 	}
 
 
-	Helpers.makeMultiGeometry = function(ctx) {
+	static makeMultiGeometry(ctx) {
 	/**
 	 * TBD - Combine 1 or more linestrings together into a multigeometry (not sure
 	 * if this will work on a Garmin GPS - test first)
 	 */
+	alert("TBD")
 	}
 
-	Helpers.reversePath = function(xml) {
+	static reversePath(xml) {
 		var result = null;
 		var parser = new DOMParser();
 		var xmlDoc = parser.parseFromString(xml, "text/xml");
@@ -570,7 +559,7 @@ assert = tassert;
 		return result;
 	}
 
-	Helpers.gx2LineString = function(xml) {
+	static gx2LineString(xml) {
 		/**
 			Replace gx:track with LineString - common for garmin GPS imports.
 
@@ -633,17 +622,17 @@ assert = tassert;
 		return result;
 	}
 
-	Helpers.getInfo = function(xml) {
-
+	static getInfo(xml) {
+		alert('not yet implemented - ideas are outline of KML, length of string, # points, # line')
 	}
 
-	Helpers.split = function(ctx) {
+	static split(ctx) {
 		alert("TBD")
 		return
 		/**
 		 Very naive split that looks for a single intersection at the end point of either
 		 segment.  If no exact intersection exists we look for the endpoint closest to one
-		 path and split there.
+		 path and split there.  Really meant to be an auto-split that fragments the strings.
 		 **/
 		var kml1 = ctx.getKML();
 		var kml2 = ctx.getKML2()
@@ -697,9 +686,14 @@ assert = tassert;
 	 path and split there.
 	 **/
 
-	Helpers.splitAtPoint = function(ctx) {
+	static splitAtPoint(ctx) {
 		var kml = ctx.getKML();
 		var point = ctx.getLatLong(2);
+
+		if (!point) {
+			alert('Invalid point - put a valid Lat,Long into the "2nd KML" input then try again.')
+			return
+		}
 
 		// Find the 1st linesting, should only be one.
 		var lss = $(kml).find("Placemark LineString");
@@ -709,7 +703,6 @@ assert = tassert;
 			var coordNode = $(lss[0]).find("coordinates");
 
 			var lineString = LineString.parseCoordinates(coordNode.text());
-
 			var where = lineString.nearestPointTo(point);
 
 			if (where) {
@@ -738,7 +731,7 @@ assert = tassert;
 	 Splits the first linestring found every N miles.
 	 **/
 
-	Helpers.splitAtDistance = function(ctx) {
+	static splitAtDistance(ctx) {
 		var kml = ctx.getKML();
 		var distance = ctx.getInteger(2);
 
@@ -772,7 +765,7 @@ assert = tassert;
 	/** Combines multiple tracks into one.  Determines best fit by comparing start and
 	 * end points of each string.
 	 */
-	Helpers.combineStrings = function(ctx) {
+	static combineStrings(ctx) {
 		var kml = ctx.getKML();
 		var point = ctx.getLatLong(2);
 
@@ -951,7 +944,7 @@ assert = tassert;
 		}
 	}
 
-	Helpers.showOnMap = function(ctx) {
+	static showOnMap(ctx) {
 		var kml = ctx.getKML();
 		var distance = ctx.getInteger(2);
 
@@ -986,5 +979,8 @@ assert = tassert;
 		});
 	}
 
-	window.Helpers = Helpers;
-}());
+	static test() {
+		LineSegment.test()
+		LineString.test_nearestPointTo()
+	}
+}

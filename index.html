@@ -22,7 +22,7 @@
 	</style>
 
 	<script src="kml.js"></script>
-	<script src="loadmap.js"></script>
+	<!-- <script src="loadmap.js"></script> -->
 
 	<script type="text/javascript">
 	$(window).ready(function() {
@@ -67,6 +67,7 @@
 						alert(xml);
 					}
 					else {
+						alert(e)
 						throw e
 					}
 				}
@@ -97,11 +98,11 @@
 <body>
 	<h1>KML Helpers</h1>
 	<div id="">
-		<div class="button-bar">
+		<!-- <div class="button-bar">
 			<button id="showKML">KML/Map</button>
 		</div>
 
-		<div id="map"></div>
+		<div id="map"></div> -->
 
 		<div id="kml-text" class="tab-body">
 			<div class="button-bar">
@@ -110,12 +111,12 @@
 				<button id="addDistance2Name" class="helper">Append Distance 2 Names</button>
 				<button id="reversePath" class="helper">Reverse Path</button>
 				<button id="gx2LineString" class="helper">GX Coords to KML Line String</button>
-				<button id="getInfo (TBD)" class="helper">Get Info</button>
-				<button id="split" class="helper2">Split</button>
+				<button id="getInfo" class="helper">Get Info</button>
+				<!-- <button id="split" class="helper2">Split</button> -->
 				<button id="splitAtPoint" class="helper2">Split At Point</button>
 				<button id="splitAtDistance" class="helper2">Split Every N Miles</button>
 				<button id="combineStrings" class="helper2">Combine LineStrings</button>
-				<button id="showOnMap" class="helper2">Show On Map</button>
+				<!-- <button id="showOnMap" class="helper2">Show On Map</button> -->
 			</div>
 			<textarea id="kmlText">
 <Document>
