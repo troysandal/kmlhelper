@@ -11,6 +11,8 @@ var EARTH_MEAN_RADIUS = 6371;
 function tassert(condition, test) {
 	if (!condition) {
 		debugger;
+		alert(`Error: ${test}`)
+		throw test
 	}
 }
 assert = tassert;
@@ -762,186 +764,185 @@ class Helpers {
 		}
 	}
 
-	/** Combines multiple tracks into one.  Determines best fit by comparing start and
-	 * end points of each string.
+	/**
+	 * Combines all the linestrings in the first KML into a single track in the
+	 * best possible, e.g. continuous, order.
+	 * @todo support a kml with 1 line string in each input.
 	 */
 	static combineStrings(ctx) {
 		var kml = ctx.getKML();
-		var point = ctx.getLatLong(2);
-
-		// Find the 1st linesting, should only be one.
 		var lss = $(kml).find("Placemark LineString");
 
-		if (lss.length > 0) {
-			// Build a list of every line string.
-			var strings = [];
-			var lssNodesCopy = []
-			var lineStringCopy = []
-			var lineStringMap = {}
-
-			lss.each(function(index, lsNode) {
-				// Search for all intersections between them.
-				var coordNode = $(lsNode).find("coordinates");
-				var lineString = LineString.parseCoordinates(coordNode.text());
-				// Turn each linestring into a doubly linked list and put it in a
-				// lookup table for later use.
-				lineString.__id = Math.random();
-				lineString.__next = null;
-				lineString.__prev = null;
-				lineString.__near = [];
-				lineString.lsNode = lsNode;
-				lineString.getPlaceMarkName = function() {
-					var placemark = this.lsNode.parentNode
-					return $("name", placemark).text();
-				}
-				console.log("PlaceMark : " + lineString.getPlaceMarkName())
-				lineStringMap[lineString.id] = lineString
-				strings.push(lineString);
-				lssNodesCopy.push(lsNode);
-				lineStringCopy.push(lineString);
-			});
-
-			console.log("Found " + strings.length + " linestrings.")
-
-			// Compare the ends of each segment and sort by distance to determine
-			// the best order.
-			console.log("Comparing begin and end points of each segment to find best connections.")
-
-			var ends = []
-
-			$.each(strings, function(index, string) {
-				ends.push({point:string.getStartPoint(), string:string});
-				ends.push({point:string.getEndPoint(), string:string});
-			})
-
-			var pairs = [];
-
-			for (var outer = 0 ; outer < ends.length - 1 ; outer++) {
-				for (var inner = outer + 1 ; inner < ends.length ; inner++ ) {
-					var p1 = ends[outer];
-					var p2 = ends[inner];
-
-					// Skip any 2 points on the same string.
-					if (p1.string !== p2.string) {
-						var distance = p1.point.distance(p2.point);
-						pairs.push({ p1:p1, p2:p2, distance:distance })
-					}
-				}
-			}
-
-			pairs.sort(function(l, r) {
-				if (l.distance < r.distance) {
-					return -1;
-				}
-				else if (l.distance > r.distance) {
-					return 1;
-				}
-				return 0;
-			});
-
-			// In theory the first [lss.length - 1] array items are the best
-			// (start, end) points.  This still doesn't provide us order in which
-			// to combine.  We start at the beginning and stitch until we have hit
-			// all N segments.
-
-			// This builds a doubly linked list where each node has a neighbor
-			// reference but not yet a next/prev as we don't know where the
-			// head and tail of the list are yet.
-			//
-			console.log("Building linked list of best candidates.")
-
-			for (var index = 0 ; index < lss.length - 1 ; index++) {
-				var pair = pairs[index];
-				var ls1 = pair.p1.string;
-				var ls2 = pair.p2.string;
-				assert(ls1 != ls2, "Pairs are actually start/end of same string");
-
-				//ls1.__near.push({point:pair.p1, string:ls2});
-				ls1.__near.push(pair.p2);
-				if (ls1.__near.length > 1) {
-					lineStringCopy.splice(lineStringCopy.indexOf(ls1), 1);
-				}
-
-				ls2.__near.push(pair.p1)
-				if (ls2.__near.length > 1) {
-					lineStringCopy.splice(lineStringCopy.indexOf(ls2), 1);
-				}
-			}
-
-			// Establish the next/prev pointers in the list by walking from start
-			// to finish.
-
-			assert(lineStringCopy.length == 2, "Didn't find logical start/end.")
-			var first = lineStringCopy[0], last = lineStringCopy[1]
-			var node = first;
-			var prev = null;
-
-			console.log("Orienting tracks...")
-			console.log("First : " + first.getPlaceMarkName())
-			console.log("Last : " + last.getPlaceMarkName())
-
-			while (node) {
-				if (node.__near[0].string == prev) {
-					node.__next = node.__near[1];
-					node.__prev = node.__near[0];
-				}
-				else {
-					node.__next = node.__near[0];
-					node.__prev = node.__near[1];
-				}
-
-				prev = node;
-				node = node.__next ? node.__next.string : null;
-			}
-
-			// Now we walk the list, ordering the strings in the direciton we're
-			// moving and build the final combined string.
-
-			console.log("Creating combined track...")
-
-			var newLineString = new LineString()
-			node = first;
-
-			while (node) {
-				var nextString = node.__next ? node.__next.string : null;
-				var prevString = node.__prev ? node.__prev.string : null
-
-				console.log("-->" + node.getPlaceMarkName())
-
-				if (node.__prev == null) {
-					assert(node.getEndPoint().isEqual(nextString.__prev.point) || node.getStartPoint().isEqual(nextString.__prev.point))
-					// Head of list, orient towards the next string
-					if (!node.getEndPoint().isEqual(nextString.__prev.point)) {
-						console.log("  reversing...")
-						node.reverse();
-					}
-				}
-				else {
-					// Previous string points in the direction we want to go
-					if (!node.getStartPoint().isEqual(prevString.__next.point)) {
-						console.log("  reversing...")
-						node.reverse();
-					}
-				}
-
-				newLineString.concat(node);
-				node = nextString;
-			}
-
-			// Now create a new placemark, replacing the first with our segment and
-
-			var placemark = lss[0].parentNode
-			var newSegment = placemark.cloneNode(true)
-			var oldName = $("name", newSegment).text();
-			$("name", newSegment).text(oldName + " (COMBINED)");
-			placemark.parentNode.insertBefore(newSegment, placemark.nextSibling);
-			$(newSegment).find("coordinates").text(newLineString.toXMLString());
-
-			ctx.save(kml);
+		if (lss.length < 2) {
+			alert(`Expected to find 2 or more linestrings in the KML but there were only ${lss.length}.`)
+			return
 		}
-		else {
-			alert("KMLs must have a single linestring each.");
+
+		// Build a list of every line string.
+		var strings = [];
+		var lssNodesCopy = []
+		var lineStringCopy = []
+		var lineStringMap = {}
+
+		lss.each(function(index, lsNode) {
+			// Search for all intersections between them.
+			var coordNode = $(lsNode).find("coordinates");
+			var lineString = LineString.parseCoordinates(coordNode.text());
+			// Turn each linestring into a doubly linked list and put it in a
+			// lookup table for later use.
+			lineString.__id = Math.random();
+			lineString.__next = null;
+			lineString.__prev = null;
+			lineString.__near = [];
+			lineString.lsNode = lsNode;
+			lineString.getPlaceMarkName = function() {
+				var placemark = this.lsNode.parentNode
+				return $("name", placemark).text();
+			}
+			console.log("PlaceMark : " + lineString.getPlaceMarkName())
+			lineStringMap[lineString.id] = lineString
+			strings.push(lineString);
+			lssNodesCopy.push(lsNode);
+			lineStringCopy.push(lineString);
+		});
+
+		console.log("Found " + strings.length + " linestrings.")
+
+		// Compare the ends of each segment and sort by distance to determine
+		// the bestnpm  order.
+		console.log("Comparing begin and end points of each segment to find best connections.")
+
+		var ends = []
+
+		$.each(strings, function(index, string) {
+			ends.push({point:string.getStartPoint(), string:string});
+			ends.push({point:string.getEndPoint(), string:string});
+		})
+
+		var pairs = [];
+
+		for (var outer = 0 ; outer < ends.length - 1 ; outer++) {
+			for (var inner = outer + 1 ; inner < ends.length ; inner++ ) {
+				var p1 = ends[outer];
+				var p2 = ends[inner];
+
+				// Skip any 2 points on the same string.
+				if (p1.string !== p2.string) {
+					var distance = p1.point.distance(p2.point);
+					pairs.push({ p1:p1, p2:p2, distance:distance })
+				}
+			}
 		}
+
+		pairs.sort(function(l, r) {
+			if (l.distance < r.distance) {
+				return -1;
+			}
+			else if (l.distance > r.distance) {
+				return 1;
+			}
+			return 0;
+		});
+
+		// In theory the first [lss.length - 1] array items are the best
+		// (start, end) points.  This still doesn't provide us order in which
+		// to combine.  We start at the beginning and stitch until we have hit
+		// all N segments.
+
+		// This builds a doubly linked list where each node has a neighbor
+		// reference but not yet a next/prev as we don't know where the
+		// head and tail of the list are yet.
+		//
+		console.log("Building linked list of best candidates.")
+
+		for (var index = 0 ; index < lss.length - 1 ; index++) {
+			var pair = pairs[index];
+			var ls1 = pair.p1.string;
+			var ls2 = pair.p2.string;
+			assert(ls1 != ls2, "Pairs are actually start/end of same string");
+
+			//ls1.__near.push({point:pair.p1, string:ls2});
+			ls1.__near.push(pair.p2);
+			if (ls1.__near.length > 1) {
+				lineStringCopy.splice(lineStringCopy.indexOf(ls1), 1);
+			}
+
+			ls2.__near.push(pair.p1)
+			if (ls2.__near.length > 1) {
+				lineStringCopy.splice(lineStringCopy.indexOf(ls2), 1);
+			}
+		}
+
+		// Establish the next/prev pointers in the list by walking from start
+		// to finish.
+
+		assert(lineStringCopy.length == 2, "Didn't find logical start/end.")
+		var first = lineStringCopy[0], last = lineStringCopy[1]
+		var node = first;
+		var prev = null;
+
+		console.log("Orienting tracks...")
+		console.log("First : " + first.getPlaceMarkName())
+		console.log("Last : " + last.getPlaceMarkName())
+
+		while (node) {
+			if (node.__near[0].string == prev) {
+				node.__next = node.__near[1];
+				node.__prev = node.__near[0];
+			}
+			else {
+				node.__next = node.__near[0];
+				node.__prev = node.__near[1];
+			}
+
+			prev = node;
+			node = node.__next ? node.__next.string : null;
+		}
+
+		// Now we walk the list, ordering the strings in the direciton we're
+		// moving and build the final combined string.
+
+		console.log("Creating combined track...")
+
+		var newLineString = new LineString()
+		node = first;
+
+		while (node) {
+			var nextString = node.__next ? node.__next.string : null;
+			var prevString = node.__prev ? node.__prev.string : null
+
+			console.log("-->" + node.getPlaceMarkName())
+
+			if (node.__prev == null) {
+				assert(node.getEndPoint().isEqual(nextString.__prev.point) || node.getStartPoint().isEqual(nextString.__prev.point))
+				// Head of list, orient towards the next string
+				if (!node.getEndPoint().isEqual(nextString.__prev.point)) {
+					console.log("  reversing...")
+					node.reverse();
+				}
+			}
+			else {
+				// Previous string points in the direction we want to go
+				if (!node.getStartPoint().isEqual(prevString.__next.point)) {
+					console.log("  reversing...")
+					node.reverse();
+				}
+			}
+
+			newLineString.concat(node);
+			node = nextString;
+		}
+
+		// Now create a new placemark, replacing the first with our segment and
+
+		var placemark = lss[0].parentNode
+		var newSegment = placemark.cloneNode(true)
+		var oldName = $("name", newSegment).text();
+		$("name", newSegment).text(oldName + " (COMBINED)");
+		placemark.parentNode.insertBefore(newSegment, placemark.nextSibling);
+		$(newSegment).find("coordinates").text(newLineString.toXMLString());
+
+		ctx.save(kml);
 	}
 
 	static showOnMap(ctx) {
